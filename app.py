@@ -101,26 +101,30 @@ def root():
             '''
 
 
-@app.route('/fen', methods=['GET'])
+@app.route('/fen', methods=['GET', 'POST'])
 def fen():
-    # Get FEN from the query string
-    if 'fen' in request.args:
-        fen = str(request.args['fen'])
+    if request.method == 'POST':
+        # fen = request.form['fen']
+        fen = request.get_json()['fen'].strip()
     else:
-        return jsonify({"error": "No 'fen' field provided or the 'fen' field is empty",
-                        "docs": "Please specify the state of the chessboard using Forsyth–Edwards Notation (FEN)."})
+        # Get FEN from the query string
+        if 'fen' in request.args:
+            fen = str(request.args['fen']).strip()
+        else:
+            return jsonify({"error": "No 'fen' field provided or the 'fen' field is empty.",
+                            "docs": "Please specify the state of the chessboard using Forsyth–Edwards Notation (FEN)."})
 
     # Validate the FEN
     has_error, reason = validate_fen(fen)
     if has_error:
-        return jsonify({"error": "Incorrect Forsyth–Edwards Notation (FEN) for the board state",
+        return jsonify({"error": "Incorrect Forsyth–Edwards Notation (FEN) for the board state.",
                         "reason": reason})
 
     fen = fen.split()
 
     # Return an error if active colour is white
     if fen[1] == 'w':
-        return jsonify({"error": "The white player is supposed to make a move"})
+        return jsonify({"error": "The white player is supposed to make a move."})
 
     state = convert_piece_placement(fen[0])
     hist = [sunfish.Position(state, 0, (True, True), (True, True), 0, 0)]
@@ -128,7 +132,7 @@ def fen():
 
     start = time.time()
     for _depth, move, _ in searcher.search(hist[-1], hist):
-        if time.time() - start > 2:
+        if time.time() - start > 1:
             m = sunfish.render(119-move[0]) + sunfish.render(119-move[1])
             return jsonify({"move": m})
 
@@ -158,17 +162,23 @@ Nf2 42. g4 Bd3 43. Re6 1/2-1/2
 '''
 
 
-@app.route('/pgn', methods=['GET'])
+@app.route('/pgn', methods=['GET', 'POST'])
 def pgn():
-    # Get pgn from the query string
-    if 'pgn' in request.args:
-        pgn = str(request.args['pgn']).split(',')
+    if request.method == 'POST':
+        pgn = request.get_json()['pgn'].strip()
     else:
-        return jsonify({"error": "No 'pgn' field provided. or the 'fen' field is empty",
-                        "docs": "Please provide the flow of the game in Portable Game Notation (PGN) format "})
+        # Get pgn from the query string
+        if 'pgn' in request.args:
+            pgn = str(request.args['pgn']).strip()
+        else:
+            return jsonify({"error": "No 'pgn' field provided or the 'fen' field is empty.",
+                            "docs": "Please provide the flow of the game in Portable Game Notation (PGN) format."})
 
-    pgn = io.StringIO(str(pgn))
-    game = chess.pgn.read_game(pgn)
+    try:
+        pgn = io.StringIO(pgn)
+        game = chess.pgn.read_game(pgn)
+    except:
+        return jsonify({"error": "The PGN could not be parsed."})
 
     board = game.board()
     moves = game.mainline_moves()
@@ -188,7 +198,7 @@ def pgn():
 
     start = time.time()
     for _depth, move, _ in searcher.search(hist[-1], hist):
-        if time.time() - start > 2:
+        if time.time() - start > 1:
             m = sunfish.render(119-move[0]) + sunfish.render(119-move[1])
             return jsonify({"move": m})
 
