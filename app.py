@@ -92,11 +92,17 @@ def convert_piece_placement(piece_placement):
 @app.route('/', methods=['GET'])
 def root():
     return '''
-            <h3>You have accessed the sunfish-API endpoint.</h3>
+            <h3>You have successfully accessed the sunfish API</h3>
 
             To know more about using the API, head to the link given below: <br>
-            <a href="https://github.com/InputBlackBoxOutput/sunfish-API">
-                https://github.com/InputBlackBoxOutput/sunfish-API
+            <a href="https://github.com/InputBlackBoxOutput/sunfish-api">
+                https://github.com/InputBlackBoxOutput/sunfish-api
+            </a>
+            <br>
+            <br>
+            A link to the API documentation is given below: <br>
+            <a href="https://documenter.getpostman.com/view/15527533/TzRPi9A5">
+            	https://documenter.getpostman.com/view/15527533/TzRPi9A5
             </a>
             '''
 
@@ -112,19 +118,19 @@ def fen():
             fen = str(request.args['fen']).strip()
         else:
             return jsonify({"error": "No 'fen' field provided or the 'fen' field is empty.",
-                            "docs": "Please specify the state of the chessboard using Forsyth–Edwards Notation (FEN)."})
+                            "docs": "Please specify the state of the chessboard using Forsyth–Edwards Notation (FEN)."}), 403
 
     # Validate the FEN
     has_error, reason = validate_fen(fen)
     if has_error:
         return jsonify({"error": "Incorrect Forsyth–Edwards Notation (FEN) for the board state.",
-                        "reason": reason})
+                        "reason": reason}), 403
 
     fen = fen.split()
 
     # Return an error if active colour is white
     if fen[1] == 'w':
-        return jsonify({"error": "The white player is supposed to make a move."})
+        return jsonify({"error": "The white player is supposed to make a move."}), 403
 
     state = convert_piece_placement(fen[0])
     hist = [sunfish.Position(state, 0, (True, True), (True, True), 0, 0)]
@@ -172,13 +178,13 @@ def pgn():
             pgn = str(request.args['pgn']).strip()
         else:
             return jsonify({"error": "No 'pgn' field provided or the 'fen' field is empty.",
-                            "docs": "Please provide the flow of the game in Portable Game Notation (PGN) format."})
+                            "docs": "Please provide the flow of the game in Portable Game Notation (PGN) format."}), 403
 
     try:
         pgn = io.StringIO(pgn)
         game = chess.pgn.read_game(pgn)
     except:
-        return jsonify({"error": "The PGN could not be parsed."})
+        return jsonify({"error": "The PGN could not be parsed."}), 403
 
     board = game.board()
     moves = game.mainline_moves()
@@ -204,7 +210,15 @@ def pgn():
 
     m = sunfish.render(119-move[0]) + sunfish.render(119-move[1])
     return jsonify({"move": m})
+    
+# ---------------------------------------------------------------------------------------------------------
+@app.errorhandler(404)
+def not_found(e):
+    return jsonify({"error": "This route does not exit"}), 404
 
-
+# ---------------------------------------------------------------------------------------------------------
 if __name__ == '__main__':
     app.run()
+
+# ---------------------------------------------------------------------------------------------------------
+# EOF
